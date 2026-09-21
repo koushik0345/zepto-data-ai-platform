@@ -4,29 +4,25 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Environment/secrets
-.env
-.env.*
-!.env.example
 
 # macOS
 .DS_Store
 
+# Environment variables
+.env
+.env.*
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated data
+*.csv
+
+# Jupyter
+.ipynb_checkpoints/
+
 # IDE
 .vscode/
 .idea/
-
-# Logs
-*.log
-
-# Generated/cache files
-chroma_db/
-*.sqlite-journal
-
-# Model/cache files
-.cache/
