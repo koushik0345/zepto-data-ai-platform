@@ -1,0 +1,10 @@
+
+# Python cache
+__pycache__/
+*.pyc
+
+# ChromaDB generated database
+chroma_db/
+
+# Local environment files
+.env
