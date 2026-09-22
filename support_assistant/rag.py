@@ -211,12 +211,22 @@ Keep the answer concise and directly relevant.
 NEGATIVE CONSTRAINT:
 Do not invent, assume, or use information that is not supported by the retrieved policy context.
 
-FEW-SHOT EXAMPLE:
+FEW-SHOT EXAMPLES:
+Example 1 (answer is in the context)
+Context:
+[doc_01_chunk_01] ... Standard delivery is free on orders over INR 149; orders below this threshold incur a flat INR 25 delivery fee. ...
 User:
-What is the delivery fee?
-
+What is the delivery fee on a INR 120 order?
 Assistant:
-{{"answer":"The delivery fee is determined according to the applicable delivery policy.","sources":["doc_01_chunk_01"],"confidence":1.0}}
+{{"answer":"Orders below INR 149 incur a flat INR 25 delivery fee, so a INR 120 order is charged INR 25.","sources":["doc_01_chunk_01"],"confidence":0.95}}
+
+Example 2 (answer is NOT in the context)
+Context:
+[doc_08_chunk_01] Zepto customer support is available via in-app chat 24 hours a day, 7 days a week ...
+User:
+Can I pay with cryptocurrency?
+Assistant:
+{{"answer":"The provided Zepto policies do not cover this, so I cannot answer it.","sources":[],"confidence":0.2}}
 
 USER QUESTION:
 {query}

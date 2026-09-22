@@ -16,6 +16,9 @@ def create_database():
 
     cursor = connection.cursor()
 
+    # Enforce the products -> categories foreign key on every insert.
+    cursor.execute("PRAGMA foreign_keys = ON")
+
     # Start clean if the script is run again.
     cursor.execute("DROP TABLE IF EXISTS products")
     cursor.execute("DROP TABLE IF EXISTS categories")
@@ -39,8 +42,9 @@ def create_database():
             category_id INTEGER NOT NULL,
             price_gbp REAL NOT NULL,
             price_inr REAL NOT NULL,
+            rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+            in_stock INTEGER NOT NULL CHECK (in_stock IN (0, 1)),
             availability TEXT NOT NULL,
-            rating INTEGER NOT NULL,
             FOREIGN KEY (category_id)
                 REFERENCES categories(category_id)
         )
@@ -74,8 +78,9 @@ def create_database():
                 category_lookup[row["category"]],
                 float(row["price_gbp"]),
                 float(row["price_inr"]),
-                row["availability"],
                 int(row["rating"]),
+                int(str(row["in_stock"]).strip().lower() == "true"),
+                row["availability"],
             )
         )
 
@@ -87,18 +92,16 @@ def create_database():
             category_id,
             price_gbp,
             price_inr,
-            availability,
-            rating
+            rating,
+            in_stock,
+            availability
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         products,
     )
 
     connection.commit()
-
-    # Enable foreign-key enforcement.
-    cursor.execute("PRAGMA foreign_keys = ON")
 
     print("=" * 60)
     print("DATABASE CREATED")
