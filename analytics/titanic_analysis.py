@@ -486,7 +486,132 @@ def main():
     plt.close()
 
     # ---------------------------------------------------------------
-    # 8. STANDARDIZATION SANITY CHECK
+    # 8. ADDITIONAL MULTIVARIATE VISUALIZATIONS
+    # ---------------------------------------------------------------
+
+    # Multivariate Chart 1: Age vs Fare, with survival and sex.
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(
+        data=cleaned,
+        x="age",
+        y="fare",
+        hue="survived",
+        style="sex",
+        alpha=0.75
+    )
+    plt.title("Age vs Fare by Survival and Sex")
+    plt.xlabel("Age")
+    plt.ylabel("Fare")
+    plt.tight_layout()
+    plt.savefig(
+        FIGURES_DIR / "age_fare_survival_sex.png",
+        dpi=150
+    )
+    plt.close()
+
+    print("\nMultivariate Chart 1 Interpretation:")
+    print(
+        "The scatter plot examines age and fare while distinguishing passengers "
+        "by survival outcome and sex. Higher fares are spread across a wide age "
+        "range, while survival patterns differ between the two survival groups."
+    )
+
+    # Multivariate Chart 2: Age by passenger class and survival.
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(
+        data=cleaned,
+        x="pclass",
+        y="age",
+        hue="survived"
+    )
+    plt.title("Age Distribution by Passenger Class and Survival")
+    plt.xlabel("Passenger Class")
+    plt.ylabel("Age")
+    plt.tight_layout()
+    plt.savefig(
+        FIGURES_DIR / "age_by_class_and_survival.png",
+        dpi=150
+    )
+    plt.close()
+
+    print("\nMultivariate Chart 2 Interpretation:")
+    print(
+        "This chart compares age distributions across passenger classes while "
+        "also separating survivors from non-survivors. Passenger classes show "
+        "different age distributions, and survival status provides an additional "
+        "dimension for comparing those distributions."
+    )
+
+    # Multivariate Chart 3: Fare by passenger class and survival.
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(
+        data=cleaned,
+        x="pclass",
+        y="fare",
+        hue="survived"
+    )
+    plt.title("Fare Distribution by Passenger Class and Survival")
+    plt.xlabel("Passenger Class")
+    plt.ylabel("Fare")
+    plt.tight_layout()
+    plt.savefig(
+        FIGURES_DIR / "fare_by_class_and_survival.png",
+        dpi=150
+    )
+    plt.close()
+
+    print("\nMultivariate Chart 3 Interpretation:")
+    print(
+        "Fare distributions vary substantially across passenger classes, with "
+        "higher-class passengers generally having higher fares. Separating the "
+        "groups by survival allows the relationship between fare level, class, "
+        "and survival to be examined together."
+    )
+
+    # Multivariate Chart 4: Survival rate by class, sex, and embarkation port.
+    survival_by_three = (
+        cleaned.groupby(
+            ["pclass", "sex", "embarked"],
+            observed=True
+        )["survived"]
+        .mean()
+        .reset_index()
+    )
+
+    survival_by_three["sex_embarked"] = (
+        survival_by_three["sex"]
+        + " / "
+        + survival_by_three["embarked"]
+    )
+
+    plt.figure(figsize=(12, 7))
+    sns.barplot(
+        data=survival_by_three,
+        x="pclass",
+        y="survived",
+        hue="sex_embarked",
+        errorbar=None
+    )
+    plt.title("Survival Rate by Class, Sex, and Embarkation Port")
+    plt.xlabel("Passenger Class")
+    plt.ylabel("Survival Rate")
+    plt.tight_layout()
+    plt.savefig(
+        FIGURES_DIR / "survival_class_sex_embarked.png",
+        dpi=150
+    )
+    plt.close()
+
+    print("\nMultivariate Chart 4 Interpretation:")
+    print(
+        "This grouped analysis combines passenger class, sex, and embarkation "
+        "port while examining survival rate. The chart highlights how survival "
+        "rates vary across class and sex groups, while the underlying grouping "
+        "also accounts for embarkation port."
+    )
+
+    # ---------------------------------------------------------------
+    # 9. STANDARDIZATION SANITY CHECK
     # ---------------------------------------------------------------
 
     print("\n" + "=" * 70)
