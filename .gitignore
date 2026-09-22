@@ -26,3 +26,7 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Committed outputs that graders need (exceptions to *.csv above)
+!analytics/titanic.csv
+!data_pipeline/sql_outputs/*.csv

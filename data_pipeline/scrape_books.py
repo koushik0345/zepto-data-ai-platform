@@ -1,13 +1,12 @@
-import re
 import time
 from pathlib import Path
+from urllib.parse import urljoin
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
 
-BASE_URL = "https://books.toscrape.com/"
 OUTPUT_FILE = Path(__file__).parent / "books_raw.csv"
 
 CATEGORIES = {
@@ -21,18 +20,13 @@ HEADERS = {
 }
 
 
-def rating_to_number(rating_text):
-    rating_map = {
-        "One": 1,
-        "Two": 2,
-        "Three": 3,
-        "Four": 4,
-        "Five": 5,
-    }
-    return rating_map.get(rating_text, None)
-
-
 def scrape_category(category_name, category_url, target_books=20):
+    """Scrape raw, unparsed book fields from one category.
+
+    Every field is stored exactly as listed on the site (price with its
+    currency symbol, star rating as a word, availability as text).
+    All type conversion happens later in data_cleaning.py.
+    """
     books = []
     next_url = category_url
 
@@ -46,6 +40,10 @@ def scrape_category(category_name, category_url, target_books=20):
         )
         response.raise_for_status()
 
+        # The site serves UTF-8 without declaring it, so set it explicitly
+        # to keep the "£" symbol intact.
+        response.encoding = "utf-8"
+
         soup = BeautifulSoup(response.text, "html.parser")
 
         for article in soup.select("article.product_pod"):
@@ -57,38 +55,38 @@ def scrape_category(category_name, category_url, target_books=20):
             availability_tag = article.select_one(".availability")
             rating_tag = article.select_one("p.star-rating")
 
-            title = title_tag.get("title", "").strip()
-            price_text = price_tag.get_text(strip=True)
-            availability_text = availability_tag.get_text(" ", strip=True)
-
-            price_match = re.search(r"([\d.]+)", price_text)
-            price_gbp = float(price_match.group(1)) if price_match else None
-
-            rating_class = rating_tag.get("class", [])
-            rating_word = next(
-                (item for item in rating_class if item != "star-rating"),
+            # The star rating is stored as a CSS class, e.g.
+            # <p class="star-rating Three">.
+            rating_classes = rating_tag.get("class", []) if rating_tag else []
+            star_rating = next(
+                (item for item in rating_classes if item != "star-rating"),
                 None,
             )
 
-            product_url = title_tag.get("href", "").strip()
+            # Relative links look like ../../../sharp-objects_997/index.html;
+            # the folder name is a stable unique product id.
+            product_url = urljoin(next_url, title_tag.get("href", ""))
+            product_id = product_url.rstrip("/").split("/")[-2]
 
             books.append(
                 {
-                    "product_id": product_url,
-                    "title": title,
+                    "product_id": product_id,
+                    "title": title_tag.get("title", "").strip(),
+                    "price": price_tag.get_text(strip=True) if price_tag else None,
+                    "star_rating": star_rating,
+                    "availability": (
+                        availability_tag.get_text(" ", strip=True)
+                        if availability_tag
+                        else None
+                    ),
                     "category": category_name,
-                    "price_gbp": price_gbp,
-                    "availability": availability_text,
-                    "rating": rating_to_number(rating_word),
                 }
             )
 
         next_link = soup.select_one("li.next a")
 
         if next_link and len(books) < target_books:
-            next_href = next_link.get("href")
-            current_page = next_url.rsplit("/", 1)[0]
-            next_url = f"{current_page}/{next_href}"
+            next_url = urljoin(next_url, next_link.get("href"))
         else:
             next_url = None
 
@@ -109,18 +107,6 @@ def main():
 
     # Remove accidental duplicates.
     df = df.drop_duplicates(subset=["product_id"])
-
-    # Keep the required columns in a clear order.
-    df = df[
-        [
-            "product_id",
-            "title",
-            "category",
-            "price_gbp",
-            "availability",
-            "rating",
-        ]
-    ]
 
     df.to_csv(OUTPUT_FILE, index=False)
 
