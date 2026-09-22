@@ -496,12 +496,39 @@ def main():
     joblib.dump(best_pipeline, best_path)
     print("\nSaved complete pipeline:", best_path)
 
-    # Reload and test using RAW input
+    # Reload and test using RAW input.
     loaded_pipeline = joblib.load(best_path)
-    raw_prediction = loaded_pipeline.predict(X_test.iloc[[0]])
 
-    print("Reloaded pipeline test prediction:",
-          int(raw_prediction[0]))
+    # 1. The reloaded pipeline reproduces the in-memory predictions exactly.
+    reloaded_matches = (
+        loaded_pipeline.predict(X_test) == best_pipeline.predict(X_test)
+    ).all()
+    print("Reloaded predictions identical on all test rows:",
+          bool(reloaded_matches))
+
+    # 2. It accepts brand-new raw passengers: text categories, unscaled
+    #    numbers, and a missing age, with no manual preprocessing.
+    new_passengers = pd.DataFrame([
+        {"pclass": 1, "sex": "female", "age": 29.0, "sibsp": 0,
+         "parch": 0, "fare": 100.0, "embarked": "C", "alone": True},
+        {"pclass": 3, "sex": "male", "age": None, "sibsp": 0,
+         "parch": 0, "fare": 7.25, "embarked": "S", "alone": True},
+    ])
+
+    new_predictions = loaded_pipeline.predict(new_passengers)
+    new_probabilities = loaded_pipeline.predict_proba(new_passengers)[:, 1]
+
+    print("\nRaw new-passenger predictions from the reloaded pipeline:")
+    for (_, passenger), prediction, probability in zip(
+        new_passengers.iterrows(),
+        new_predictions,
+        new_probabilities,
+    ):
+        print(
+            f"  class {passenger['pclass']} {passenger['sex']:<6} "
+            f"age={passenger['age']} fare={passenger['fare']:.2f} -> "
+            f"survived={int(prediction)} (p={probability:.3f})"
+        )
 
     # ------------------------------------------------------------
     # 12. REGRESSION: PREDICT FARE
@@ -611,22 +638,48 @@ def main():
     plt.savefig(FIGURES_DIR / "fare_regression_residuals.png")
     plt.close()
 
-    residual_prediction_corr = pd.Series(
-        abs(residuals)
-    ).corr(pd.Series(yr_pred))
+    # Heteroscedasticity check: does the residual spread change with the
+    # predicted value? Use plain arrays so pandas does not align the test
+    # set's original index against the 0..n-1 prediction index.
+    residual_values = residuals.to_numpy()
+
+    residual_prediction_corr = pd.Series(abs(residual_values)).corr(
+        pd.Series(yr_pred)
+    )
 
     print(
         f"\nCorrelation between absolute residuals and predictions: "
         f"{residual_prediction_corr:.4f}"
     )
 
-    if abs(residual_prediction_corr) > 0.30:
+    spread = (
+        pd.DataFrame({
+            "prediction_band": pd.qcut(
+                yr_pred,
+                3,
+                labels=["low", "mid", "high"],
+            ),
+            "residual": residual_values,
+        })
+        .groupby("prediction_band", observed=True)["residual"]
+        .agg(["count", "std"])
+    )
+
+    print("\nResidual spread by predicted-fare band:")
+    print(spread.to_string())
+
+    spread_ratio = spread.loc["high", "std"] / spread.loc["low", "std"]
+    print(f"High/low residual std ratio: {spread_ratio:.2f}")
+
+    if spread_ratio > 2:
         print(
-            "Residual pattern suggests possible heteroscedasticity."
+            "Residual spread grows with predicted fare -> "
+            "heteroscedasticity is present."
         )
     else:
         print(
-            "No strong heteroscedasticity signal from this diagnostic."
+            "Residual spread is roughly constant -> "
+            "no clear heteroscedasticity."
         )
 
     # ------------------------------------------------------------

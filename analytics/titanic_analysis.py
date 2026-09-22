@@ -232,49 +232,44 @@ def main():
     print("BIVARIATE ANALYSIS")
     print("=" * 70)
 
-    survival_sex = (
-        cleaned.groupby("sex")["survived"]
-        .mean()
-        .mul(100)
-    )
+    # Every survival rate below is computed with boolean masks.
 
-    print("\nSurvival by sex (%):")
-    print(survival_sex)
+    def survival_rate(mask):
+        group = cleaned[mask]
+        return group["survived"].mean() * 100, len(group)
 
-    survival_class = (
-        cleaned.groupby("pclass")["survived"]
-        .mean()
-        .mul(100)
-    )
+    sex_masks = {
+        sex: cleaned["sex"] == sex
+        for sex in ["female", "male"]
+    }
 
-    print("\nSurvival by passenger class (%):")
-    print(survival_class)
+    class_masks = {
+        pclass: cleaned["pclass"] == pclass
+        for pclass in [1, 2, 3]
+    }
 
-    survival_sex_class = (
-        cleaned.groupby(["sex", "pclass"])["survived"]
-        .mean()
-        .mul(100)
-    )
+    print("\n(a) Survival by sex:")
+    for sex, mask in sex_masks.items():
+        rate, n = survival_rate(mask)
+        print(f"{sex:<7} {rate:6.2f}%  (n={n})")
 
-    print("\nSurvival by sex and passenger class (%):")
-    print(survival_sex_class)
+    print("\n(b) Survival by passenger class:")
+    for pclass, mask in class_masks.items():
+        rate, n = survival_rate(mask)
+        print(f"class {pclass} {rate:6.2f}%  (n={n})")
 
-    # ---------------------------------------------------------------
-    # 5. BOOLEAN MASK
-    # ---------------------------------------------------------------
+    print("\n(c) Survival by sex AND passenger class (mask_sex & mask_class):")
+    for sex, sex_mask in sex_masks.items():
+        for pclass, class_mask in class_masks.items():
+            rate, n = survival_rate(sex_mask & class_mask)
+            print(f"{sex:<7} class {pclass} {rate:6.2f}%  (n={n})")
 
-    female_mask = cleaned["sex"] == "female"
-    first_class_mask = cleaned["pclass"] == 1
+    # OR combination: women in any class OR anyone in first class.
+    rate, n = survival_rate(sex_masks["female"] | class_masks[1])
+    print(f"\nfemale | class 1 {rate:6.2f}%  (n={n})")
 
-    female_first_class = cleaned[
-        female_mask & first_class_mask
-    ]
-
-    print("\nBoolean-mask example:")
-    print(
-        "Female first-class passengers:",
-        len(female_first_class)
-    )
+    rate, n = survival_rate(sex_masks["male"] & (class_masks[2] | class_masks[3]))
+    print(f"male & (class 2 | class 3) {rate:6.2f}%  (n={n})")
 
     # ---------------------------------------------------------------
     # 6. CORRELATION MATRIX
