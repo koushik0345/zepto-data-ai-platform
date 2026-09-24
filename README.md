@@ -1,5 +1,7 @@
 # Zepto Data & AI Platform
 
+Repository: <https://github.com/koushik0345/zepto-data-ai-platform>
+
 An end-to-end AI/ML capstone in one repository, with three connected modules:
 
 1. **[`data_pipeline/`](data_pipeline/)**: scrapes catalogue data, cleans it, converts prices to INR and loads it into a normalized SQLite database for SQL and pandas analysis.
